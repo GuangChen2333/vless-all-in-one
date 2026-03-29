@@ -13,13 +13,13 @@
 #  适配: Alpine/Debian/Ubuntu/CentOS
 #  
 #  
-#  作者: Chil30
-#  项目地址: https://github.com/Chil30/vless-all-in-one
+#  作者: GuangChen2333
+#  项目地址: https://github.com/GuangChen2333/vless-all-in-one
 #═══════════════════════════════════════════════════════════════════════════════
 
 readonly VERSION="3.1.10"
-readonly AUTHOR="Chil30"
-readonly REPO_URL="https://github.com/Chil30/vless-all-in-one"
+readonly AUTHOR="GuangChen2333"
+readonly REPO_URL="https://github.com/GuangChen2333/vless-all-in-one"
 readonly CFG="/etc/vless-reality"
 
 # curl 超时常量
@@ -5296,7 +5296,7 @@ create_shortcut() {
             cp -f "$real_path" "$system_script"
         else
             # 内存运行模式，从网络下载
-            local raw_url="https://raw.githubusercontent.com/Chil30/vless-all-in-one/main/vless-server.sh"
+            local raw_url="https://raw.githubusercontent.com/GuangChen2333/vless-all-in-one/main/vless-server.sh"
             if ! curl -sL --connect-timeout 10 -o "$system_script" "$raw_url"; then
                 _warn "无法下载脚本到系统目录"
                 return 1
@@ -14634,7 +14634,7 @@ do_update() {
     echo -e "  当前版本: ${G}v${VERSION}${NC}"
     _info "检查最新版本..."
     
-    local raw_url="https://raw.githubusercontent.com/Chil30/vless-all-in-one/main/vless-server.sh"
+    local raw_url="https://raw.githubusercontent.com/GuangChen2333/vless-all-in-one/main/vless-server.sh"
     local tmp_file=$(mktemp)
     
     # 下载最新脚本
@@ -14790,5 +14790,23 @@ main_menu() {
     done
 }
 
+handle_cli_args() {
+    case "${1:-}" in
+        -install)
+            check_root
+            create_shortcut || return 1
+            return 0
+            ;;
+        "")
+            main_menu
+            return 0
+            ;;
+        *)
+            echo "用法: $0 [-install]"
+            return 1
+            ;;
+    esac
+}
+
 # 启动主菜单
-main_menu
+handle_cli_args "$1"
