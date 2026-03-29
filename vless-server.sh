@@ -1777,6 +1777,23 @@ gen_sid() {
     fi
 }
 
+# 解析 xray x25519 输出，兼容不同版本的字段格式
+extract_x25519_keys() {
+    local keys="$1"
+    local privkey="" pubkey=""
+
+    privkey=$(printf '%s\n' "$keys" | sed -nE 's/^[[:space:]]*Private([[:space:]]*Key|Key)?[[:space:]]*:[[:space:]]*(.+)$/\2/p' | head -n1)
+    pubkey=$(printf '%s\n' "$keys" | sed -nE 's/^[[:space:]]*Public([[:space:]]*Key|Key)?[[:space:]]*:[[:space:]]*(.+)$/\2/p' | head -n1)
+
+    if [[ -z "$privkey" || -z "$pubkey" ]]; then
+        privkey=$(printf '%s\n' "$keys" | awk 'NF{print $NF}' | sed -n '1p')
+        pubkey=$(printf '%s\n' "$keys" | awk 'NF{print $NF}' | sed -n '2p')
+    fi
+
+    [[ -n "$privkey" && -n "$pubkey" ]] || return 1
+    printf '%s|%s\n' "$privkey" "$pubkey"
+}
+
 # 证书诊断函数
 diagnose_certificate() {
     local domain="$1"
@@ -11583,9 +11600,10 @@ do_install_server() {
             local uuid=$(gen_uuid) sid=$(gen_sid)
             local keys=$(xray x25519 2>/dev/null)
             [[ -z "$keys" ]] && { _err "密钥生成失败"; _pause; return 1; }
-            local privkey=$(echo "$keys" | grep "PrivateKey:" | awk '{print $2}')
-            local pubkey=$(echo "$keys" | grep "Password:" | awk '{print $2}')
-            [[ -z "$privkey" || -z "$pubkey" ]] && { _err "密钥提取失败"; _pause; return 1; }
+            local parsed_keys=$(extract_x25519_keys "$keys")
+            [[ -z "$parsed_keys" ]] && { _err "密钥提取失败"; _pause; return 1; }
+            local privkey="${parsed_keys%%|*}"
+            local pubkey="${parsed_keys#*|}"
             
             # 使用统一的证书和 Nginx 配置函数
             setup_cert_and_nginx "vless"
@@ -11616,9 +11634,10 @@ do_install_server() {
             local uuid=$(gen_uuid) sid=$(gen_sid) path="$(gen_xhttp_path)"
             local keys=$(xray x25519 2>/dev/null)
             [[ -z "$keys" ]] && { _err "密钥生成失败"; _pause; return 1; }
-            local privkey=$(echo "$keys" | grep "PrivateKey:" | awk '{print $2}')
-            local pubkey=$(echo "$keys" | grep "Password:" | awk '{print $2}')
-            [[ -z "$privkey" || -z "$pubkey" ]] && { _err "密钥提取失败"; _pause; return 1; }
+            local parsed_keys=$(extract_x25519_keys "$keys")
+            [[ -z "$parsed_keys" ]] && { _err "密钥提取失败"; _pause; return 1; }
+            local privkey="${parsed_keys%%|*}"
+            local pubkey="${parsed_keys#*|}"
             
             # 使用统一的证书和 Nginx 配置函数
             setup_cert_and_nginx "vless-xhttp"
